@@ -89,12 +89,12 @@ app.post("/addToCart", (req, res) => {
             let flag = 0;
             console.log(currentCart, "printing")
             currentCart.forEach((ele, idx) => {
-                if(ele.pid === pid){
+                if (ele.pid === pid) {
                     ele.quantity = ele.quantity + 1;
                     flag = 1;
                     // console.log(ele, 'printing inside loop');
                 }
-                
+
             })
             if (flag === 0) {
                 const newProduct = {
@@ -106,58 +106,77 @@ app.post("/addToCart", (req, res) => {
                 }
                 currentCart.push(newProduct);
             }
-            Cart.updateOne({uid : uid},{
-                $set : {
-                    cartItems : currentCart
+            Cart.updateOne({ uid: uid }, {
+                $set: {
+                    cartItems: currentCart
                 }
             })
-            .then(resp =>{
-                console.log("Successfully added to cart",resp)
-                res.send(resp);
-            })
-            .catch(err=> {
-                console.log(err);
-                res.send(err);
-            });
+                .then(resp => {
+                    console.log("Successfully added to cart", resp)
+                    res.send(resp);
+                })
+                .catch(err => {
+                    console.log(err);
+                    res.send(err);
+                });
             console.log(currentCart);
         })
 
 })
+app.post("/getCart", (req, res) => {
+    const uid = req.body.uid;
+
+    Cart.findOne({ uid: uid })
+        .then(resp => {
+            let cartTotal = 0;
+            let cart = resp.cartItems;
+            cart.forEach((ele,idx)=>{
+                cartTotal = cartTotal + (ele.quantity*ele.price);
+            })
+            // console.log(cartTotal,'pr')
+            res.status(200).json({ message: resp, total : cartTotal })
+        })
+        .catch(err => {
+            console.log(err);
+        })
+})
+
 
 app.post("/deleteFromCart", (req, res) => {
     const pid = req.body.pid;
     const uid = req.body.uid;
+    const del =  req.body.delete;
     let currentCart = [];
+    let temp = [];
     Cart.findOne({ uid: uid })
         .then(resp => {
             currentCart = resp.cartItems;
+            currentCart.forEach((ele) => {
+                console.log(ele,pid,"check");
+                if (ele.pid === pid) {
+                    
+                    ele.quantity = ele.quantity - 1;
+                    if(ele.quantity === 0 || del){
+                        temp = currentCart.filter((elem)=>{
+                            return elem.pid != ele.pid;
+                        })
+                        currentCart = temp;
+                    }
+                }
+                
+            })
+            console.log(currentCart,"backend");
+            Cart.updateOne({ uid: uid }, {
+                $set: {
+                    cartItems: currentCart
+                }
+            })
+                .then(resp => {
+                    console.log("Successfully added to cart", resp)
+                })
+                .catch(err => console.log(err));
         })
-    let flag = 0;
-    currentCart.forEach((ele) => {
-        if (ele.pid === pid) {
-            ele.quantity = ele.quantity - 1;
-            flag = 1;
-        }
-    })
-    if (flag === 0) {
-        const newProduct = {
-            pid: pid,
-            quantity: 1,
-            title: pdata.header.title,
-            image: pdata.header.image,
-            price: pdata.price
-        }
-        currentCart.push(newProduct);
-    }
-    Cart.updateOne({ uid: uid }, {
-        $set: {
-            cartItems: currentCart
-        }
-    })
-        .then(resp => {
-            console.log("Successfully added to cart", resp)
-        })
-        .catch(err => console.log(err));
+
 })
 
 
